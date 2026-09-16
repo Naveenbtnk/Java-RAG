@@ -10,6 +10,7 @@ import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
@@ -41,12 +42,30 @@ public class RagService {
 
     /**
      * Ingests {@code src/main/resources/company_policy.pdf} by default. For a packaged
-     * deployment, point {@code RAG_DOCUMENT_PATH} at an external PDF file.
+    * deployment, point {@code RAG_DOCUMENT_PATH} at an external PDF file.
      */
     public synchronized void ingest() {
         Path documentPath = Path.of(properties.ingestion().documentPath()).toAbsolutePath().normalize();
-        if (!Files.isRegularFile(documentPath)) {
-            throw new IllegalStateException("RAG document does not exist: " + documentPath);
+        Path loadPath = documentPath;
+        boolean temporaryClasspathCopy = false;
+
+        // In a packaged JAR, src/main/resources is no longer an OS directory.
+        // Fall back to the bundled classpath resource so Render/Docker deployments work.
+        if (!Files.isRegularFile(loadPath)) {
+            ClassPathResource resource = new ClassPathResource("company_policy.pdf");
+            if (!resource.exists()) {
+                throw new IllegalStateException("RAG document does not exist: " + documentPath);
+            }
+            try {
+                loadPath = Files.createTempFile("company_policy-", ".pdf");
+                try (var inputStream = resource.getInputStream()) {
+                    Files.copy(inputStream, loadPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+                temporaryClasspathCopy = true;
+                documentPath = loadPath;
+            } catch (java.io.IOException exception) {
+                throw new IllegalStateException("Unable to prepare bundled RAG document", exception);
+            }
         }
 
         status.set(IngestionStatus.running(documentPath.toString()));
@@ -75,6 +94,14 @@ public class RagService {
         } catch (RuntimeException exception) {
             status.set(IngestionStatus.failed(documentPath.toString(), exception.getMessage()));
             throw exception;
+        } finally {
+            if (temporaryClasspathCopy) {
+                try {
+                    Files.deleteIfExists(loadPath);
+                } catch (java.io.IOException exception) {
+                    log.warn("Unable to delete temporary RAG document {}", loadPath, exception);
+                }
+            }
         }
     }
 
