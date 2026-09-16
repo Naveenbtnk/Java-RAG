@@ -11,8 +11,18 @@ A complete Java Retrieval-Augmented Generation (RAG) application. It parses a co
 
 ---
 
+## 🌐 Live Demo
+
+| | Link |
+|---|---|
+| 🚀 Application | [Open Java RAG](https://java-rag.onrender.com/) |
+| ❤️ Health Check | [Application health](https://java-rag.onrender.com/actuator/health) |
+
+---
+
 ## 📚 Table of Contents
 
+- [Live Demo](#-live-demo)
 - [Features](#-features)
 - [Architecture](#️-architecture)
 - [Tech Stack](#-tech-stack)
