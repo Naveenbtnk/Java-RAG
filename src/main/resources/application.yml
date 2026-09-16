@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: java-rag
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  error:
+    include-message: never
+
+spring.lifecycle.timeout-per-shutdown-phase: 20s
+
+app:
+  rag:
+    mistral:
+      api-key: ${MISTRAL_AI_API_KEY:}
+      embedding-model-name: ${MISTRAL_EMBEDDING_MODEL:mistral-embed}
+      chat-model-name: ${MISTRAL_CHAT_MODEL:mistral-small-latest}
+      timeout: ${MISTRAL_TIMEOUT:60s}
+    pgvector:
+      host: ${PGVECTOR_HOST:localhost}
+      port: ${PGVECTOR_PORT:5433}
+      database: ${PGVECTOR_DATABASE:vector_db}
+      user: ${PGVECTOR_USER:postgres}
+      password: ${PGVECTOR_PASSWORD:postgres}
+      table: ${PGVECTOR_TABLE:rag_embeddings}
+      dimension: 1024
+    ingestion:
+      document-path: ${RAG_DOCUMENT_PATH:src/main/resources/company_policy.pdf}
+      chunk-size: 500
+      chunk-overlap: 50
+      clear-before-ingest: ${RAG_CLEAR_BEFORE_INGEST:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    root: INFO
+    com.example.rag: INFO
