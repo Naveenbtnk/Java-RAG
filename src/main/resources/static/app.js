@@ -12,6 +12,58 @@ const uploadStatus = document.querySelector('#upload-status');
 
 const welcomeMarkup = messages.innerHTML;
 
+function escapeHtml(value) {
+    return value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function inlineMarkdown(value) {
+    return escapeHtml(value)
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/`(.+?)`/g, '<code>$1</code>');
+}
+
+function renderMarkdown(value) {
+    const lines = value.replaceAll('\r\n', '\n').split('\n');
+    const output = [];
+    let listOpen = false;
+
+    const closeList = () => {
+        if (listOpen) {
+            output.push('</ul>');
+            listOpen = false;
+        }
+    };
+
+    for (const line of lines) {
+        const heading = line.match(/^#{1,4}\s+(.+)$/);
+        const item = line.match(/^\s*[-*]\s+(.+)$/);
+
+        if (heading) {
+            closeList();
+            output.push(`<div class="md-heading">${inlineMarkdown(heading[1])}</div>`);
+        } else if (item) {
+            if (!listOpen) {
+                output.push('<ul>');
+                listOpen = true;
+            }
+            output.push(`<li>${inlineMarkdown(item[1])}</li>`);
+        } else if (!line.trim()) {
+            closeList();
+        } else {
+            closeList();
+            output.push(`<p>${inlineMarkdown(line)}</p>`);
+        }
+    }
+
+    closeList();
+    return output.join('');
+}
+
 function appendMessage(role, text, typing = false) {
     const article = document.createElement('article');
     article.className = `message ${role}-message${typing ? ' typing' : ''}`;
@@ -26,8 +78,13 @@ function appendMessage(role, text, typing = false) {
     const speaker = document.createElement('span');
     speaker.className = 'speaker';
     speaker.textContent = role === 'user' ? 'You' : 'Policy Lens';
-    const content = document.createElement('p');
-    content.textContent = text;
+    const content = document.createElement('div');
+    content.className = 'message-content';
+    if (role === 'assistant' && !typing) {
+        content.innerHTML = renderMarkdown(text);
+    } else {
+        content.textContent = text;
+    }
 
     bubble.append(speaker, content);
     article.append(avatar, bubble);
