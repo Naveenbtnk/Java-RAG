@@ -11,6 +11,7 @@ import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
@@ -68,32 +69,8 @@ public class RagService {
             }
         }
 
-        status.set(IngestionStatus.running(documentPath.toString()));
-        log.info("Ingesting RAG document: {}", documentPath);
-
         try {
-            Document document = loadDocument(documentPath, new ApachePdfBoxDocumentParser());
-
-            // This application owns the configured table. Replacing its contents makes
-            // startup ingestion deterministic and prevents duplicate chunks after restarts.
-            if (properties.ingestion().clearBeforeIngest()) {
-                embeddingStore.removeAll();
-            }
-
-            EmbeddingStoreIngestor.builder()
-                    .documentSplitter(DocumentSplitters.recursive(
-                            properties.ingestion().chunkSize(),
-                            properties.ingestion().chunkOverlap()))
-                    .embeddingModel(embeddingModel)
-                    .embeddingStore(embeddingStore)
-                    .build()
-                    .ingest(document);
-
-            status.set(IngestionStatus.completed(documentPath.toString()));
-            log.info("RAG document ingestion completed: {}", documentPath);
-        } catch (RuntimeException exception) {
-            status.set(IngestionStatus.failed(documentPath.toString(), exception.getMessage()));
-            throw exception;
+            ingestPath(documentPath, documentPath.toString());
         } finally {
             if (temporaryClasspathCopy) {
                 try {
@@ -102,6 +79,64 @@ public class RagService {
                     log.warn("Unable to delete temporary RAG document {}", loadPath, exception);
                 }
             }
+        }
+    }
+
+    /** Ingests a user-uploaded PDF and replaces the current knowledge base. */
+    public synchronized void ingest(MultipartFile upload) {
+        if (upload == null || upload.isEmpty()) {
+            throw new IllegalArgumentException("A non-empty PDF file is required");
+        }
+        String filename = upload.getOriginalFilename() == null ? "uploaded.pdf" : upload.getOriginalFilename();
+        if (!filename.toLowerCase(java.util.Locale.ROOT).endsWith(".pdf")) {
+            throw new IllegalArgumentException("Only PDF files are supported");
+        }
+        Path temporary = null;
+        try {
+            temporary = Files.createTempFile("uploaded-policy-", ".pdf");
+            upload.transferTo(temporary);
+            byte[] signature = new byte[5];
+            try (var inputStream = Files.newInputStream(temporary)) {
+                if (inputStream.read(signature) != signature.length
+                        || !java.util.Arrays.equals(signature, "%PDF-".getBytes(java.nio.charset.StandardCharsets.US_ASCII))) {
+                    throw new IllegalArgumentException("The uploaded file is not a valid PDF");
+                }
+            }
+            ingestPath(temporary, filename);
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException("Unable to read uploaded PDF", exception);
+        } finally {
+            if (temporary != null) {
+                try {
+                    Files.deleteIfExists(temporary);
+                } catch (java.io.IOException exception) {
+                    log.warn("Unable to delete uploaded PDF temporary file {}", temporary, exception);
+                }
+            }
+        }
+    }
+
+    private void ingestPath(Path documentPath, String displayName) {
+        status.set(IngestionStatus.running(displayName));
+        log.info("Ingesting RAG document: {}", displayName);
+        try {
+            Document document = loadDocument(documentPath, new ApachePdfBoxDocumentParser());
+            if (properties.ingestion().clearBeforeIngest()) {
+                embeddingStore.removeAll();
+            }
+            EmbeddingStoreIngestor.builder()
+                    .documentSplitter(DocumentSplitters.recursive(
+                            properties.ingestion().chunkSize(),
+                            properties.ingestion().chunkOverlap()))
+                    .embeddingModel(embeddingModel)
+                    .embeddingStore(embeddingStore)
+                    .build()
+                    .ingest(document);
+            status.set(IngestionStatus.completed(displayName));
+            log.info("RAG document ingestion completed: {}", displayName);
+        } catch (RuntimeException exception) {
+            status.set(IngestionStatus.failed(displayName, exception.getMessage()));
+            throw exception;
         }
     }
 

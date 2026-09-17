@@ -6,11 +6,14 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 
@@ -35,6 +38,13 @@ public class ChatController {
     @GetMapping("/ingestion/status")
     public RagService.IngestionStatus ingestionStatus() {
         return ragService.status();
+    }
+
+    @PostMapping(value = "/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<RagService.IngestionStatus> uploadDocument(
+            @RequestPart("file") MultipartFile file) {
+        ragService.ingest(file);
+        return ResponseEntity.ok(ragService.status());
     }
 
     public record ChatRequest(

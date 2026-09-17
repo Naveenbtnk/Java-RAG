@@ -1,0 +1,13 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+.classpath
+.project
+.settings
+.idea
+*.iml
+*.log
+target
+.tooling

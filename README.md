@@ -158,6 +158,7 @@ All settings have environment-variable overrides in `application.yml`:
 | Method | Path | Description |
 |---|---|---|
 | `POST` | `/api/chat` | Send `{"message":"..."}`, receive a grounded answer |
+| `POST` | `/api/documents` | Upload a PDF using multipart field `file` and replace the indexed policy |
 | `GET` | `/api/ingestion/status` | Check current ingestion state |
 | `GET` | `/actuator/health` | Application health check |
 | `GET` | `/` | Browser chat UI |
@@ -181,6 +182,7 @@ docker compose down          # stop and remove containers
 - 🔐 Use a secret manager (e.g., Vault, AWS Secrets Manager, Azure Key Vault) in production
 - 🔒 Enable TLS on all production database connections
 - 🧾 Rotate the `MISTRAL_AI_API_KEY` periodically and scope it to least privilege
+- 👤 Protect `/api/documents` with authentication, malware scanning, and tenant isolation before accepting uploads from untrusted users
 
 ---
 

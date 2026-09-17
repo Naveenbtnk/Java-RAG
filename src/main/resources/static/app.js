@@ -5,6 +5,10 @@ const messages = document.querySelector('#messages');
 const status = document.querySelector('#system-status');
 const statusLabel = document.querySelector('#status-label');
 const suggestions = document.querySelector('#suggestions');
+const uploadForm = document.querySelector('#upload-form');
+const policyFile = document.querySelector('#policy-file');
+const uploadButton = document.querySelector('#upload-button');
+const uploadStatus = document.querySelector('#upload-status');
 
 const welcomeMarkup = messages.innerHTML;
 
@@ -83,6 +87,31 @@ input.addEventListener('keydown', event => {
 
 suggestions.addEventListener('click', event => {
     if (event.target.matches('button')) sendMessage(event.target.textContent);
+});
+
+uploadForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const file = policyFile.files[0];
+    if (!file) return;
+    uploadButton.disabled = true;
+    uploadStatus.className = '';
+    uploadStatus.textContent = 'Uploading and indexing…';
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+        const response = await fetch('/api/documents', {method: 'POST', body: formData});
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.message || `Upload failed (${response.status})`);
+        uploadStatus.textContent = `Indexed ${file.name}. You can ask questions about it now.`;
+        messages.innerHTML = welcomeMarkup;
+        suggestions.hidden = false;
+        await refreshStatus();
+    } catch (error) {
+        uploadStatus.className = 'error';
+        uploadStatus.textContent = error.message;
+    } finally {
+        uploadButton.disabled = false;
+    }
 });
 
 document.querySelector('#clear-button').addEventListener('click', () => {

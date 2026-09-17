@@ -1,9 +1,13 @@
 spring:
   application:
     name: java-rag
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${PORT:${SERVER_PORT:8080}}
   shutdown: graceful
   error:
     include-message: never
@@ -44,3 +48,4 @@ logging:
   level:
     root: INFO
     com.example.rag: INFO
+    org.apache.pdfbox.pdmodel.font: ERROR

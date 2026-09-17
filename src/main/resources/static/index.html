@@ -7,7 +7,7 @@
     <title>Policy Lens — RAG Assistant</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -28,7 +28,7 @@
     <main>
         <section class="hero">
             <p class="eyebrow">COMPANY KNOWLEDGE · VERIFIED ANSWERS</p>
-            <h1>Policy answers,<br><em>without the guesswork.</em></h1>
+            <h1>Policy answers,<br><span>without the guesswork.</span></h1>
             <p class="hero-copy">Ask a question about your company policy. Every response is grounded in the PDF indexed by the RAG pipeline.</p>
             <div class="tech-row" aria-label="Technology stack">
                 <span>Spring Boot</span><i></i><span>LangChain4j</span><i></i><span>Mistral AI</span><i></i><span>PGVector</span>
@@ -53,6 +53,13 @@
                     </div>
                 </article>
             </div>
+
+            <form class="upload-form" id="upload-form">
+                <label for="policy-file">Replace policy PDF</label>
+                <input id="policy-file" type="file" accept="application/pdf,.pdf" required>
+                <button type="submit" id="upload-button">Upload and index</button>
+                <span id="upload-status" role="status"></span>
+            </form>
 
             <div class="suggestions" id="suggestions">
                 <button type="button">What is the leave policy?</button>

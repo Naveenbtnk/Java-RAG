@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.Instant;
 
@@ -25,9 +26,21 @@ public class ApiExceptionHandler {
                 .body(new ApiError("INVALID_REQUEST", message, Instant.now()));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiError> invalidUpload(IllegalArgumentException exception) {
+        return ResponseEntity.badRequest()
+                .body(new ApiError("INVALID_DOCUMENT", exception.getMessage(), Instant.now()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> uploadTooLarge(MaxUploadSizeExceededException exception) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(new ApiError("DOCUMENT_TOO_LARGE", "PDF files must be 10 MB or smaller", Instant.now()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> unexpectedError(Exception exception) {
-        log.error("Chat request failed", exception);
+        log.error("RAG request failed", exception);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiError(
                         "RAG_REQUEST_FAILED",
